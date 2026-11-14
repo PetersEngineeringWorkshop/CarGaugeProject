@@ -28,6 +28,7 @@
     ]
   },
   "display": {
+    "left_screen": 2,
     "temperature_unit": "F",
     "pressure_unit": "psi",
     "compass_theme": "dark",

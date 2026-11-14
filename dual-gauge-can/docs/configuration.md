@@ -62,7 +62,10 @@ calibration with the existing partition layout. Relative attitude zero is RAM-on
 
 GPIO13 short press cycles Display 1; GPIO4 short press cycles Display 2. Existing
 long-press behavior remains: GPIO13 re-centers only when Display 1 shows Horizon;
-GPIO4 long press is unassigned, including if Horizon is placed on Display 2.
+GPIO4 long press alone is unassigned, including if Horizon is placed on Display 2.
+Holding both buttons together for two seconds toggles demo/live data, suppressing
+individual actions until both are released. Demo uses these same manifests and
+is RAM-only; see the README for the confirmation screens and data isolation.
 
 ## Match PCLink
 
@@ -97,6 +100,7 @@ peer for normal ECU transmission. No automatic mode or bitrate switching occurs.
 
 | Property under `display` | Allowed values / meaning |
 | --- | --- |
+| `left_screen` | Physical left display: `1` (CS10/GPIO13 button) or `2` (CS7/GPIO4 button). Shipped value `2`; omitted in older configs defaults to `1`. Controls two-screen confirmation word order, not face lists/buttons. |
 | `temperature_unit` | `F` or `C`; default `F` |
 | `pressure_unit` | `psi` or `kPa`; default `psi` |
 | `compass_theme` | `dark` or `light`; default `dark` |

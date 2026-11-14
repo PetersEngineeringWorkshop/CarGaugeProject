@@ -338,3 +338,73 @@ metadata and the serial startup banner are now 1.0.0. The final vehicle build
 passed without compiler warnings; it was not uploaded. Firmware SHA-256:
 
 `053f632cc4335beb39c9c2c133909c3305cea784ae7be361f62360fb8492baf9`
+
+
+## Demo/live controls — November 14, 2026 (v1.1.0-dev)
+
+Both debounced buttons held together for two seconds toggle a RAM-only demo
+source. Confirmation uses DEMO / MODE or LIVE / DATA for one full second after
+both transfer queues complete. All CAN model channels are simulated and animated
+in a separate store; the real receiver keeps running. Returning to live clears
+cached real readings and waits for new actual frames. Engine faces carry a
+persistent DEMO / SIMULATED label. Local sensors and configured face lists are
+unchanged. Restart defaults to live. Individual short/long actions are suppressed
+through the combined hold and its release.
+
+Host checks: all nine configuration tests and twelve native executables passed.
+The new test covers simultaneous/staggered holds, early release, aborted holds,
+release suppression, boot-held buttons, re-arming and millis rollover; every
+synthetic channel varies and stays valid, actual traffic remains isolated, the
+notice interval excludes transfer time, and live exit clears demo/cached values.
+Existing display, decoder, settings, sensor math and calibration tests passed.
+The real Adafruit GFX preview additionally checks a demo/live label change forces
+redraw even when the reading is identical, unchanged demo frames skip drawing,
+and returning live restores the original pixels. Notice screens and demo label
+were visually inspected.
+
+Vehicle, debug and listen-only builds passed without warnings. Static RAM is
+256784 bytes; vehicle flash 458102 bytes (debug 458286). The vehicle firmware
+was uploaded to `/dev/cu.usbmodem1101` with esptool hash verification. Calibration
+and NVS were retained. Firmware SHA-256: `6edae3d148eb181007231943e7c45f1185746a44c12223893ea08ad366e6d817`.
+
+Initial serial readback shows live mode, no CAN frames, both local sensors fresh
+with no read errors, and CAL SAVED with the previous offsets. The removed saved
+Fuel face correctly fell back to Compass. The physical demo/live gesture check
+is being recorded in `diagnostics/demo-hardware.log`; its outcome follows below.
+Real ECU reception after this revision is not established by a disconnected-bus
+bench test. No CAN application messages are transmitted by demo mode.
+
+
+### Physical results and left/right correction
+
+The user confirmed both transitions, the one-second notices, animated demo
+readings, and return to NO CAN DATA on the disconnected bench. The first build
+had the words reversed because physical Display 2 is left and Display 1 is right.
+Added validated optional `display.left_screen` (1 or 2); the shipped files use 2,
+older files omitting it default to 1. This changes confirmation word order only.
+All configuration/native tests and three firmware builds passed again, and the
+corrected vehicle build uploaded with hash verification. The user then confirmed
+both DEMO MODE and LIVE DATA read correctly left to right.
+
+The first capture contains 181 DUAL reports including buffered startup, spanning
+186.139 seconds of uptime. It records demo → live → demo, with no unintended
+single-button long events or level sets. Demo RPM ranged 900.18–3899.84, coolant
+55–115 °C, voltage 13.3–14.1 V and IAT 16.01–40 °C. All live-mode engine reports
+were UNAVAILABLE with no incoming CAN frames. CAN errors, losses and alerts stayed
+zero. There were no unexpected resets or sensor read errors; both sensors were
+fresh after the initial startup report. Free heap ranged 106364–106644 bytes
+while cycling/saving faces and ended at 106512. Maximum recorded loop was
+26.144 ms. This is a short functional run, not an extended soak.
+
+The corrected firmware restarted in LIVE after the preceding DEMO session,
+confirming the RAM-only mode default on hardware; saved magnetic calibration
+remained loaded. Final capture: `diagnostics/demo-corrected-hardware.log`.
+Final firmware SHA-256: `c9fb720bbd3a7a5d39c50aa1297e7d2b50bc71caaccef5c133f1e1ea5222dd62`.
+
+The user also noticed missing Lambda/Fuel/Fan faces. Explained that this flash
+includes the previously prepared JSON manifest, which omits those unavailable
+live sources; demo deliberately follows the same manifest. The user accepted
+that behavior. Optional live fuel/lambda sources and fan mapping were not enabled.
+No real ECU data was available during this bench test, so vehicle verification
+of live reception after a demo session remains outstanding. These changes are
+installed and committed as 1.1.0-dev; a formal v1.1.0 release remains separate.

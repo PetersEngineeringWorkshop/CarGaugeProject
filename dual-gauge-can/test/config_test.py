@@ -37,6 +37,11 @@ class ConfigurationTests(unittest.TestCase):
             with self.subTest(faces=faces):self.reject(lambda c:c['displays'].update({'1':faces}))
         c=copy.deepcopy(BASE);c['displays']={'1':['compass'],'2':['horizon']};config.validate(c)
     def test_units_ranges(self):
+        self.assertIn('leftScreen=1',config.header(BASE))
+        c=copy.deepcopy(BASE);c['display']['left_screen']=2
+        self.assertIn('leftScreen=2',config.header(c))
+        for value in [0,3,True,'2']:
+            self.reject(lambda c:c['display'].update(left_screen=value))
         self.reject(lambda c:c['display'].update(temperature_unit='kelvin'))
         self.reject(lambda c:c['display'].update(stale_ms=0))
         self.reject(lambda c:c['display']['coolant_c'].update(high=60))

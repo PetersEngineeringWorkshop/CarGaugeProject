@@ -1,4 +1,4 @@
-# Dual Gauge CAN v1.0.0
+# Dual Gauge CAN v1.1.0-dev
 
 ![Dual gauges in the vehicle showing intake air at 77.0°F and coolant at 168.8°F](docs/images/vehicle-gauges.png)
 
@@ -18,10 +18,16 @@ firmware 6.22.3** ECU.
   [vehicle connection notes](docs/vehicle-connection.md)
 - [Verification record](docs/verification.md) and [v1.0.0 release notes](docs/release-v1.0.0.md)
 
-**v1.0.0 is published with known validation limits.** The JSON configuration
-revision has passed automated checks and builds but has not yet been flashed
-or hardware-tested. The preceding graphics/CAN revision was tested in the
-vehicle.
+**Current development: v1.1.0-dev adds the two-button demo/live toggle.**
+Hold both buttons for two seconds to demonstrate the configured engine gauges
+without an ECU; hold both again to return to live data. The corrected left/right
+confirmation screens and both transitions have been tested on the hardware.
+See [demo mode controls](#demo-mode--both-buttons). Live ECU reception after a
+demo session still needs a vehicle test.
+
+The published v1.0.0 release retains its recorded validation limits; at publication
+its final JSON revision had not been flashed. Current bench and vehicle evidence
+is tracked separately in the verification record.
 
 In the vehicle test, the module connected directly to the Link in place of the
 AEM lambda through a 12-inch twisted pair and ground. The first listen-only
@@ -141,7 +147,8 @@ flowchart LR
 Short presses act on release, with independent 40 ms debounce. Holding for two
 seconds fires one long event, and release never cycles a gauge afterward. A
 held-at-boot button must be released to arm it. Both buttons remain responsive
-while the other is held. A GPIO13 long press re-centers **only when Horizon is
+when used separately. Holding both buttons invokes the demo/live gesture below.
+A GPIO13 long press re-centers **only when Horizon is
 selected**, preserving the filter and showing LEVEL SET for 1.5 seconds. All
 other long presses are unassigned, including Compass; calibration remains
 available over serial.
@@ -159,6 +166,42 @@ ignored. Buttons do not cycle presentation styles. The original
 settings and `qmc5883p/hardiron` calibration records are not overwritten by gauge
 selection changes. Attitude zero remains RAM-only and initializes from the first
 valid MPU sample after each restart; keep it still at startup.
+
+## Demo mode — both buttons
+
+Hold **GPIO13 and GPIO4 together for two seconds** after both presses debounce.
+The physical left screen shows **DEMO** and the right shows **MODE**, in orange,
+for one full second after both screens finish drawing the confirmation. The selected engine
+faces then show simulated values. Hold both again to show **LIVE** / **DATA** in
+green for one second and return to actual ECU readings.
+`display.left_screen: 2` matches this enclosure (CS7/GPIO4 on the left,
+CS10/GPIO13 on the right). Change it to `1` for the opposite physical layout;
+face lists, button assignments and saved selections are unaffected.
+
+- All CAN model channels receive dynamic demo values, including RPM, coolant,
+  IAT, voltage, MAP/barometer, oil/fuel pressure, lambda and fan states. Coolant
+  sweeps through the configured color bands; voltage and IAT vary smoothly.
+- The configured face lists and normal short-press navigation remain in effect.
+  Demo does not add omitted gauges or enable unsupported fan faces in the manifest.
+- Every simulated engine face carries an orange **DEMO / SIMULATED** label.
+  Horizon and Compass continue using their real local sensors.
+- One toggle per hold. Release both buttons before another gesture. A partial
+  two-button hold is cancelled on release and does not cycle either screen or
+  re-center the horizon. Individual button actions are suppressed during the
+  combined gesture and one-second confirmation. Boot-held buttons must be released.
+- Demo is never saved: every restart begins in **LIVE** mode. Saved gauge
+  selections, magnetic calibration and the RAM attitude reference are unchanged
+  by toggling demo/live.
+- CAN reception continues independently in the background. Synthetic values are
+  never sent onto CAN or inserted into the live data store. Leaving demo clears
+  cached live readings and requires newly received actual frames. Without an ECU,
+  live engine faces show **NO CAN DATA**, rather than retained demo values.
+- `ENGINE source=DEMO` / `source=LIVE` labels serial measurements; `DATA MODE`
+  records each toggle. `CAN STATUS` always describes the real controller/bus.
+  Demo does not change the configured acknowledgment mode.
+
+The confirmation and data animation use `millis()` schedules and existing
+bounded tile transfers, so sensor sampling, CAN service and the watchdog continue.
 
 ## CAN bring-up and diagnostic limits
 
@@ -313,7 +356,7 @@ per-panel progress, modes, heap and reset information. CAN has a separate summar
 line to keep output bounded. `v` prints the configuration hash, declared ECU
 settings and face counts. `?` lists commands; `i` scans I²C; `j` lists observed
 CAN IDs and Generic Dash subframe snapshots; `r` restarts. `ENGINE` logs decoded
-values and freshness independently of the selected face. There are no engine demo values or commands to transmit.
+values and freshness independently of the selected face. Demo readings are explicitly labeled by source; there are no application CAN transmit commands.
 The inherited analyzer checks stable DUAL reports; inspect CAN summaries separately.
 
 Bench acceptance with CANH/L disconnected: verify CAN initializes and reports
@@ -332,7 +375,7 @@ sh tools/run_native.sh
 
 Run from `dual-gauge-can` on a host with Python 3 and a C++17 compiler.
 Configuration tests validate malformed inputs and compile/run an alternate
-metric/extended-ID configuration with optional sensors enabled. Eleven native
+metric/extended-ID configuration with optional sensors enabled. Twelve native
 executables exercise the real model/conversions, mode storage, CAN
 receiver with a fake transport, button state machines, display transfer logic,
 compass math, horizon geometry and calibration workflow. Test fixtures stay in

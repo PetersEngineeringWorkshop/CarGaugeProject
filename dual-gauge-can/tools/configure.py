@@ -14,10 +14,10 @@ SCALES = {"coolant", "iat", "rpm", "boost", "battery", "oil", "fuel", "lambda"}
 class ConfigError(ValueError):
     pass
 
-def keys(value, expected, path):
+def keys(value, expected, path, optional=()):
     if not isinstance(value, dict):
         raise ConfigError(f"{path}: expected an object")
-    missing, extra = set(expected)-set(value), set(value)-set(expected)
+    missing, extra = set(expected)-set(value), set(value)-set(expected)-set(optional)
     if missing or extra:
         raise ConfigError(f"{path}: missing keys {sorted(missing)}; unknown keys {sorted(extra)}")
 
@@ -61,7 +61,8 @@ def validate(c):
             choice(face,FACES,f"displays.{screen}")
         if len(set(faces))!=len(faces):
             raise ConfigError(f"displays.{screen}: duplicate faces are not allowed")
-    d=c["display"];keys(d,{"temperature_unit","pressure_unit","compass_theme","horizon_style","stale_ms","coolant_c","lambda"},"display")
+    d=c["display"];keys(d,{"temperature_unit","pressure_unit","compass_theme","horizon_style","stale_ms","coolant_c","lambda"},"display",{"left_screen"})
+    number(d.get("left_screen",1),1,2,"display.left_screen",True)
     choice(d["temperature_unit"],{"C","F"},"display.temperature_unit")
     choice(d["pressure_unit"],{"kPa","psi"},"display.pressure_unit")
     choice(d["compass_theme"],{"dark","light"},"display.compass_theme")
@@ -116,6 +117,7 @@ def header(c):
     for name,screen in (("first","1"),("second","2")):
         lines.append(f'inline constexpr Gauge {name}[]={{'+','.join('Gauge::'+FACES[f] for f in c['displays'][screen])+'};')
     lines += [f'inline constexpr uint32_t staleMs={d["stale_ms"]};',
+              f'inline constexpr unsigned leftScreen={d.get("left_screen",1)};',
               f'inline constexpr bool temperatureF={flag(d["temperature_unit"]=="F")}, pressurePsi={flag(d["pressure_unit"]=="psi")};',
               f'inline constexpr bool compassLight={flag(d["compass_theme"]=="light")}, horizonNumerical={flag(d["horizon_style"]=="numerical")};',
               f'inline constexpr bool showAfr={flag(d["lambda"]["unit"]=="afr")};',

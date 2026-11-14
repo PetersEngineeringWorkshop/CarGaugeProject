@@ -1,5 +1,6 @@
 #include "engine_gauge.h"
 #include "compass_gauge.h"
+#include "mode_notice.h"
 #include <cassert>
 #include <fstream>
 #include <string>
@@ -24,6 +25,17 @@ int main(int argc,char **argv) {
     }
     data.get(S::IatC).set(15,100);gauge.draw(Gauge::Iat,data,100,true);save(canvas,dir+"/iat.ppm");
     data.get(S::BatteryV).set(11.8f,100);gauge.draw(Gauge::Battery,data,100,true);save(canvas,dir+"/battery.ppm");
+    std::vector<uint8_t> livePixels(canvas.getBuffer(),canvas.getBuffer()+240*240);
+    assert(gauge.draw(Gauge::Battery,data,100,false,true));
+    assert(livePixels!=std::vector<uint8_t>(canvas.getBuffer(),canvas.getBuffer()+240*240));
+    save(canvas,dir+"/demo-battery.ppm");
+    assert(!gauge.draw(Gauge::Battery,data,100,false,true));
+    assert(gauge.draw(Gauge::Battery,data,100,false,false));
+    assert(livePixels==std::vector<uint8_t>(canvas.getBuffer(),canvas.getBuffer()+240*240));
+    const char *notices[]={"demo-notice","mode-notice","live-notice","data-notice"};
+    for(int i=0;i<4;++i) {
+        drawModeNotice(canvas,i<2,i%2==0);save(canvas,dir+"/"+notices[i]+".ppm");
+    }
     data.get(S::MapKpa).set(92,100);data.get(S::BaroKpa).set(100.9f,100);
     gauge.draw(Gauge::Boost,data,100,true);save(canvas,dir+"/boost.ppm");
     gauge.draw(Gauge::Fuel,data,100,true);save(canvas,dir+"/unavailable.ppm");

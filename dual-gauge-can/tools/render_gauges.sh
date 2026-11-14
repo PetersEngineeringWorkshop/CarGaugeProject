@@ -29,6 +29,6 @@ for i,name in enumerate(names):
         offset=((y+row)*792+x)*3
         preview[offset:offset+720]=pixels[row*720:(row+1)*720]
 out=Path(sys.argv[2]);out.parent.mkdir(parents=True,exist_ok=True);png(out,792,792,preview)
-for name in ['stale','invalid']:png(out.with_name(name+'.png'),240,240,tile(name))
+for name in ['stale','invalid','demo-battery','demo-notice','mode-notice','live-notice','data-notice']:png(out.with_name(name+'.png'),240,240,tile(name))
 print(out.resolve())
 PY

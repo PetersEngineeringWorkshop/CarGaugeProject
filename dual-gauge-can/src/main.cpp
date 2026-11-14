@@ -9,7 +9,9 @@
 #include "attitude_gauge.h"
 #include "imu.h"
 #include "magnetometer.h"
-#include "button.h"
+#include "dual_button.h"
+#include "demo_mode.h"
+#include "mode_notice.h"
 #include "display_settings.h"
 #include "engine_gauge.h"
 #include "can_receiver.h"
@@ -22,10 +24,10 @@ CompassGauge compassOnFirst(horizonDisplay.canvas());
 AttitudeGauge horizonOnSecond(compassDisplay.canvas());
 IMU imu;
 Magnetometer magnetometer;
-DebouncedButton attitudeButton, compassButton;
+DualButton buttons;
 DisplaySettings settings;
 EngineGauge firstEngine(horizonDisplay.canvas()), secondEngine(compassDisplay.canvas());
-engine::Data engineData;
+DemoMode dataMode;
 LinkGenericDashDecoder decoder;
 CanReceiver can;
 bool levelConfirmation=false;
@@ -91,13 +93,16 @@ void command(char value) {
                 instrumentConfig::ecuBus,instrumentConfig::ecuChannel,(unsigned long)instrumentConfig::canId,
                 instrumentConfig::canExtended?"extended":"standard",instrumentConfig::ecuRateHz,
                 unsigned(sizeof(gaugeConfig::first)/sizeof(Gauge)),unsigned(sizeof(gaugeConfig::second)/sizeof(Gauge)));
+            logLine("DATA MODE source=%s announcement=%d; hold both buttons 2s to toggle\n",dataMode.enabled()?"DEMO":"LIVE",dataMode.announcing());
             break;
-        case '?': logLine("COMMANDS c=calibrate60s f=finish x=cancel s=saveCal l=loadCal e=eraseCal i=scan r=reboot j=listCANidsAndMuxSnapshots v=config; GPIO13 display1, GPIO4 display2\n"); break;
+        case '?': logLine("COMMANDS c=calibrate60s f=finish x=cancel s=saveCal l=loadCal e=eraseCal i=scan r=reboot j=listCANidsAndMuxSnapshots v=config; GPIO13 display1, GPIO4 display2, BOTH hold2s=demo/live\n"); break;
     }
 }
 
 void render() {
     uint32_t now=millis();
+    if(dataMode.announcing()) return;
+    const auto &engineData=dataMode.readings();
     bool hDue=!horizonDisplay.busy() && (firstHorizon || now-lastHorizon>=67);
     bool cDue=!compassDisplay.busy() && (firstCompass || now-lastCompass>=50);
     // At most one CPU-heavy draw per loop; alternate priority when both are due.
@@ -111,7 +116,7 @@ void render() {
         else if(settings.first==Gauge::Compass) {
             auto state=magnetometer.displayState();state.light=gaugeConfig::compassLight;
             painted=compassOnFirst.draw(state,firstHorizonDraw);
-        } else painted=firstEngine.draw(settings.first,engineData,now,firstHorizonDraw);
+        } else painted=firstEngine.draw(settings.first,engineData,now,firstHorizonDraw,dataMode.enabled());
         if(painted) horizonDisplay.present();
         preferHorizon=false;
         maximum(horizonDrawMaxUs,micros()-started);
@@ -124,7 +129,7 @@ void render() {
         } else if(settings.second==Gauge::Horizon) {
             horizonOnSecond.draw(imu.relativePitch(),imu.relativeRoll(),imu.fresh(),compassDisplay.frames+1,levelConfirmation,settings.numerical);
             painted=true;
-        } else painted=secondEngine.draw(settings.second,engineData,now,firstCompass);
+        } else painted=secondEngine.draw(settings.second,engineData,now,firstCompass,dataMode.enabled());
         if(painted) compassDisplay.present();
         firstCompass=false; preferHorizon=true;
         maximum(compassDrawMaxUs,micros()-started);
@@ -132,6 +137,7 @@ void render() {
 }
 
 void engineReport(uint32_t now) {
+    const auto &engineData=dataMode.readings();
     using S=engine::Signal;
     const S signals[]={S::Rpm,S::CoolantC,S::MapKpa,S::BaroKpa,S::BatteryV,S::IatC};
     char values[6][20]{};
@@ -144,8 +150,8 @@ void engineReport(uint32_t now) {
             case engine::State::Valid:snprintf(values[i],sizeof(values[i]),"%.2f",channel.value);break;
         }
     }
-    logLine("ENGINE up=%lu rpm=%s coolant_c=%s map_kpa=%s baro_kpa=%s battery_v=%s iat_c=%s matched=%lu malformed=%lu unknown_mux=%lu invalid_values=%lu optional_sources=%d,%d,%d\n",
-        (unsigned long)now,values[0],values[1],values[2],values[3],values[4],values[5],
+    logLine("ENGINE up=%lu source=%s rpm=%s coolant_c=%s map_kpa=%s baro_kpa=%s battery_v=%s iat_c=%s matched=%lu malformed=%lu unknown_mux=%lu invalid_values=%lu optional_sources=%d,%d,%d\n",
+        (unsigned long)now,dataMode.enabled()?"DEMO":"LIVE",values[0],values[1],values[2],values[3],values[4],values[5],
         (unsigned long)decoder.matched,(unsigned long)decoder.malformed,
         (unsigned long)decoder.unknownMux,(unsigned long)decoder.invalidValues,
         instrumentConfig::enableOil,instrumentConfig::enableFuel,instrumentConfig::enableLambda);
@@ -193,9 +199,9 @@ void setup() {
     beginDiagnostics();
     pinMode(hardware::attitudeButton,INPUT_PULLUP);
     pinMode(hardware::compassButton,INPUT_PULLUP);
-    attitudeButton.begin(digitalRead(hardware::attitudeButton)==HIGH,millis());
-    compassButton.begin(digitalRead(hardware::compassButton)==HIGH,millis());
-    // CAN acknowledgment is selected explicitly by the build environment.
+    buttons.begin(digitalRead(hardware::attitudeButton)==HIGH,
+                  digitalRead(hardware::compassButton)==HIGH,millis());
+    // CAN acknowledgment is selected explicitly by JSON, unchanged in demo mode.
     esp_task_wdt_config_t config{};
     config.timeout_ms=5000; config.trigger_panic=true;
     auto result=esp_task_wdt_init(&config);
@@ -212,7 +218,7 @@ void setup() {
     logLine("DISPLAY index=2 face=%s cs=7 initialized=1 readback=unavailable\n",gaugeConfig::name(settings.second));
     // Begin sampling only after the startup-only display initialization delays.
     imu.begin(); stage(CanService); can.begin(); stage(Idle);
-    logLine("Dual Gauge CAN v1.0.0 bus=%d cs=10,7 spi_hz=%u indexed_buffers=230400 tile_buffers=512 heap=%u reset=%d prev=%lu wdt=%d; keep MPU still at startup\n",
+    logLine("Dual Gauge CAN v1.1.0-dev bus=%d cs=10,7 spi_hz=%u indexed_buffers=230400 tile_buffers=512 heap=%u reset=%d prev=%lu wdt=%d; keep MPU still at startup\n",
             busReady,(unsigned)hardware::spiHz,(unsigned)ESP.getFreeHeap(),
             (int)esp_reset_reason(),(unsigned long)previousStage,watchdogReady);
     command('v');
@@ -223,13 +229,27 @@ void setup() {
 void loop() {
     uint32_t started=micros();
     uint32_t buttonNow=millis();
-    auto hEvent=attitudeButton.update(digitalRead(hardware::attitudeButton)==HIGH,buttonNow);
-    auto cEvent=compassButton.update(digitalRead(hardware::compassButton)==HIGH,buttonNow);
+    auto events=buttons.update(digitalRead(hardware::attitudeButton)==HIGH,
+                               digitalRead(hardware::compassButton)==HIGH,buttonNow);
     stage(ImuRead); imu.service();
     stage(MagRead); magnetometer.service();
-    stage(CanService); can.service(decoder,engineData);
+    stage(CanService); can.service(decoder,dataMode.live);
     // Snapshot the just-filtered attitude, without an intervening sensor update.
-    handleButtons(hEvent,cEvent);
+    if(!dataMode.announcing()) {
+        if(events.toggle) {
+            dataMode.toggle(millis());levelConfirmation=false;
+            horizonDisplay.cancel();compassDisplay.cancel();
+            drawModeNotice(horizonDisplay.canvas(),dataMode.enabled(),gaugeConfig::leftScreen==1);
+            drawModeNotice(compassDisplay.canvas(),dataMode.enabled(),gaugeConfig::leftScreen==2);
+            horizonDisplay.present();compassDisplay.present();
+            logLine("DATA MODE source=%s action=both_hold live_reset=%d\n",
+                    dataMode.enabled()?"DEMO":"LIVE",!dataMode.enabled());
+        } else handleButtons(events.first,events.second);
+    }
+    dataMode.service(millis());
+    if(dataMode.finishAnnouncement(millis(),!horizonDisplay.busy() && !compassDisplay.busy())) {
+        firstHorizon=firstCompass=true;
+    }
     stage(Storage); settings.service();
     if(levelConfirmation && millis()-levelSetAt>=1500) {
         levelConfirmation=false; horizonDisplay.cancel(); firstHorizon=true;

@@ -13,12 +13,13 @@ c++ -std=c++17 -O2 -I test/fakes -I "$dgc_test_dir/config" -I include test/setti
 c++ -std=c++17 -O2 -I test/fakes -I "$dgc_test_dir/config" -I include test/can_receiver_test.cpp src/can/CanReceiver.cpp -o "$dgc_test_dir/can"
 c++ -std=c++17 -O2 -I test/fakes -I "$dgc_test_dir/passive" -I include test/can_receiver_test.cpp src/can/CanReceiver.cpp -o "$dgc_test_dir/can_passive"
 c++ -std=c++17 -O2 -I "$dgc_test_dir/config" -I include test/button_test.cpp src/input/Button.cpp -o "$dgc_test_dir/button"
+c++ -std=c++17 -O2 -I include test/demo_mode_test.cpp src/input/Button.cpp -o "$dgc_test_dir/demo"
 framebuffer_src=../shared/IndexedFramebuffer/src
 c++ -std=c++17 -O2 -I test/fakes -I "$dgc_test_dir/config" -I include -I "$framebuffer_src" \
     test/display_test.cpp src/gauges/Display.cpp "$framebuffer_src/IndexedFramebuffer.cpp" -o "$dgc_test_dir/display"
 c++ -std=c++17 -O2 -I "$dgc_test_dir/config" -I include test/compass_math_test.cpp -o "$dgc_test_dir/compass"
 c++ -std=c++17 -O2 -I "$dgc_test_dir/config" -I include test/horizon_geometry_test.cpp -o "$dgc_test_dir/horizon"
 c++ -std=c++17 -O2 -I test/fakes -I "$dgc_test_dir/config" -I include test/calibration_workflow_test.cpp src/sensors/Magnetometer.cpp src/sensors/calibration_store.cpp -o "$dgc_test_dir/calibration"
-for dgc_test in style decoder data settings can can_passive button display compass horizon calibration; do
+for dgc_test in style decoder data settings can can_passive button demo display compass horizon calibration; do
     "$dgc_test_dir/$dgc_test"
 done

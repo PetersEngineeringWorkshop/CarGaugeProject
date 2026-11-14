@@ -4,10 +4,11 @@
 class EngineGauge {
 public:
     explicit EngineGauge(GFXcanvas8 &c):canvas(c) {}
-    bool draw(Gauge,const engine::Data &,uint32_t now,bool force=false);
+    bool draw(Gauge,const engine::Data &,uint32_t now,bool force=false,bool demo=false);
 private:
     GFXcanvas8 &canvas;
     bool initialized=false;
+    bool lastDemo=false;
     Gauge previous=Gauge::Horizon;
     EngineReading last{};
     uint8_t lastAccent=colors::Muted;

@@ -51,15 +51,15 @@ void EngineGauge::icon(Gauge gauge,uint8_t color) {
         canvas.drawLine(120,46,126,39,color);canvas.fillCircle(120,46,2,color);
     }
 }
-bool EngineGauge::draw(Gauge gauge,const engine::Data &data,uint32_t now,bool force) {
+bool EngineGauge::draw(Gauge gauge,const engine::Data &data,uint32_t now,bool force,bool demo) {
     auto reading=engineReading(gauge,data,now);
     auto style=gaugeStyle::forReading(gauge,reading);
     bool valid=reading.state==engine::State::Valid;
     float position=valid?gaugeStyle::position(style,reading.value):0;
     int segment=int(std::round(position*54));
-    if(!force && initialized && previous==gauge && last.state==reading.state &&
+    if(!force && initialized && lastDemo==demo && previous==gauge && last.state==reading.state &&
        !strcmp(last.text,reading.text) && lastAccent==style.accent && lastSegment==segment) return false;
-    initialized=true;previous=gauge;last=reading;lastAccent=style.accent;lastSegment=segment;
+    initialized=true;lastDemo=demo;previous=gauge;last=reading;lastAccent=style.accent;lastSegment=segment;
     canvas.fillScreen(Black);
     canvas.setTextWrap(false);
     canvas.drawCircle(120,120,117,Track);
@@ -81,13 +81,13 @@ bool EngineGauge::draw(Gauge gauge,const engine::Data &data,uint32_t now,bool fo
             canvas.setCursor(66-int(strlen(low))*3,201);canvas.print(low);
             canvas.setCursor(174-int(strlen(high))*3,201);canvas.print(high);
         }
-        centered("LINK / LIVE",222,1,Muted);
+        centered(demo?"DEMO / SIMULATED":"LINK / LIVE",222,1,demo?EngineOrange:Muted);
     } else {
         centered("---",104,5,Muted);
         centered(reading.state==engine::State::Never?"NO CAN DATA":reading.state==engine::State::Stale?"STALE DATA":"INVALID DATA",153,1,
                  reading.state==engine::State::Never?Muted:EngineOrange);
         centered(reading.state==engine::State::Never?"SOURCE UNAVAILABLE":"WAITING FOR VALID DATA",180,1,Muted);
-        centered("LINK / CAN",222,1,Muted);
+        centered(demo?"DEMO / SIMULATED":"LINK / CAN",222,1,demo?EngineOrange:Muted);
     }
     return true;
 }
