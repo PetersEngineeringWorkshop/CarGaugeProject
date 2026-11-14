@@ -1,10 +1,11 @@
 # Micro-electronics
 
-ESP32-S3 firmware and hardware documentation for round-display instruments.
+ESP32-S3 firmware and hardware documentation for gauge displays.
 Choose a project for its wiring, controls, calibration, and test results.
 
 | Project | Hardware and features | Parts |
 | --- | --- | --- |
+| [Touch Screen CAN](touch-screen-can/README.md) | One 2.8-inch touchscreen with two configurable Link Generic Dash gauges and a bench demo mode. | [BOM](touch-screen-can/docs/BOM.md) |
 | [Dual Gauge CAN](dual-gauge-can/README.md) | Two displays with configurable horizon, compass, and engine-data faces for a Link ECU using Generic Dash CAN. | [BOM](dual-gauge-can/docs/BOM.md) |
 | [Dual Gauge with Buttons](dual-gauge-with-buttons/README.md) | Two displays run the horizon and compass together, with independent buttons for display modes, re-centering, and calibration. | [BOM](dual-gauge-with-buttons/docs/BOM.md) |
 | [Compass & Horizon](compass-horizon/README.md) | One display switches between the compass and artificial horizon with a button. | [BOM](compass-horizon/docs/BOM.md) |
