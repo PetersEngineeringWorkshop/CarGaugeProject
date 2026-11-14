@@ -1,4 +1,4 @@
-# Touch Screen CAN v1.0.0
+# Touch Screen CAN v1.1.0
 
 Single-screen Link Generic Dash instrument for an ESP32-S3 SuperMini
 (ESP32-S3FH4R2, 4 MB flash), an ILI9341 240×320 SPI display with XPT2046 resistive
@@ -7,6 +7,7 @@ reading conversions, and coolant thresholds from the same code used by
 [Dual Gauge CAN](../dual-gauge-can/README.md). Build from the full repository.
 
 [Bill of materials](docs/BOM.md) · [Wiring diagram](#wiring-diagram) ·
+[v1.1.0 release notes](docs/release-v1.1.0.md) ·
 [v1.0.0 release notes](docs/release-v1.0.0.md)
 
 ## Wiring
@@ -61,6 +62,11 @@ From this directory, run `pio run`, then
 for CAN status and touch diagnostics. Use `j` to list observed CAN IDs and
 Link mux snapshots. Send `c` to restart touch calibration.
 
+At power-up, a Honda H splash fades out before the gauges appear. Set
+`instrumentConfig::showHondaSplash` to `false` in
+[`include/instrument_config.h`](include/instrument_config.h), then rebuild and
+upload to start directly on the gauges or first-run calibration.
+
 At first boot, tap and release the three crosshairs. Tap anywhere on the gauge
 screen to open the menu, then tap the **LEFT** or **RIGHT** cell next to a gauge
 to assign it to that side. Tap **DONE** to return to the two gauges. Either side
@@ -75,6 +81,11 @@ to RPM (coolant if the saved gauge was RPM). To repeat calibration, choose
 The five options are coolant temperature, RPM, boost (MAP minus barometric
 pressure), ECU supply voltage, and intake air temperature.
 The gauge distinguishes waiting, stale, and invalid readings.
+The RPM bar changes from blue at zero to green at 900 RPM, then through
+yellow to red at 6,500 RPM. The red **LIMIT** label appears at or above
+6,500 RPM. Set `instrumentConfig::rpmIdle` and `instrumentConfig::rpmLimit`
+in [`include/instrument_config.h`](include/instrument_config.h) to change
+the idle and redline points, then rebuild and upload.
 
 ### Demo mode
 

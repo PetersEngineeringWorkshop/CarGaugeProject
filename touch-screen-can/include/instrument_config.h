@@ -4,6 +4,10 @@
 #include "gauge_types.h"
 
 namespace instrumentConfig {
+inline constexpr bool showHondaSplash = true;
+inline constexpr uint32_t rpmIdle = 900;
+inline constexpr uint32_t rpmLimit = 6500;
+static_assert(rpmIdle > 0 && rpmIdle < rpmLimit, "Idle RPM must be between zero and the RPM limit");
 inline constexpr uint32_t canBitrate = 500000;
 inline constexpr uint32_t canId = 1000;
 inline constexpr bool canExtended = false;

@@ -1,4 +1,8 @@
 #include <Adafruit_ILI9341.h>
+#include <Fonts/FreeSans9pt7b.h>
+#include <Fonts/FreeSansBold9pt7b.h>
+#include <Fonts/FreeSansBold18pt7b.h>
+#include <Fonts/FreeSansBold24pt7b.h>
 #include <Preferences.h>
 #include <SPI.h>
 #include <XPT2046_Touchscreen.h>
@@ -24,9 +28,9 @@ constexpr uint16_t track = 0x2946;
 constexpr int readingWidth = 144;
 constexpr int readingHeight = 56;
 constexpr int valueTop = 63;
-constexpr int detailTop = 127;
+constexpr int detailTop = valueTop + readingHeight;
 constexpr int barTop = 195;
-constexpr int barHeight = 14;
+constexpr int barHeight = 18;
 constexpr int columnWidth = hardware::width / 2;
 constexpr Side sides[] = {Side::Left, Side::Right};
 constexpr int menuTop = 38;
@@ -64,8 +68,13 @@ TouchCalibration calibration;
 TouchCalibration candidate;
 TouchTap taps;
 
-enum class Page { Gauge, Menu, Calibrate };
+enum class Page { Splash, Gauge, Menu, Calibrate };
 Page page = Page::Calibrate;
+constexpr uint32_t splashHoldMs = 850;
+constexpr uint32_t splashStepMs = 30;
+constexpr uint8_t splashSteps = 16;
+uint32_t splashStarted = 0;
+uint8_t splashStep = 0;
 unsigned calibrationStep = 0;
 bool settingsOpen = false;
 bool settingsDirty = false;
@@ -80,6 +89,7 @@ struct ReadingPaint {
     const char *units = "";
     const char *status = "";
     uint16_t valueColor = background;
+    uint16_t statusColor = background;
     int bar = -1;
     uint16_t accent = background;
 };
@@ -98,12 +108,52 @@ void centerText(const char *text, int16_t x, int16_t y, uint8_t size, uint16_t c
     centerText(tft, text, x, y, size, color);
 }
 
+void centerSans(Adafruit_GFX &display, const GFXfont &font, const char *text,
+                int16_t center, int16_t baseline, uint16_t color, bool degree = false) {
+    if (!*text) return;
+    display.setFont(&font);
+    display.setTextSize(1);
+    display.setTextColor(color);
+    int16_t left, top;
+    uint16_t width, height;
+    display.getTextBounds(text, 0, 0, &left, &top, &width, &height);
+    constexpr int degreeWidth = 7;
+    const int16_t x = center - (width + (degree ? degreeWidth : 0)) / 2;
+    // The bundled FreeSans fonts cover ASCII, so draw the degree mark separately.
+    if (degree) display.drawCircle(x + 2, baseline + top + 2, 2, color);
+    display.setCursor(x + (degree ? degreeWidth : 0) - left, baseline);
+    display.print(text);
+    display.setFont(nullptr);
+}
+
 void pushReading(int x, int y) {
     // Send the finished pixels together so a live update never paints a blank field first.
     tft.startWrite();
     tft.setAddrWindow(x, y, readingWidth, readingHeight);
     tft.writePixels(readingCanvas.getBuffer(), readingWidth * readingHeight);
     tft.endWrite();
+}
+
+void drawValue(const char *value, uint16_t color) {
+    readingCanvas.fillScreen(background);
+    readingCanvas.setTextSize(1);
+    readingCanvas.setTextColor(color);
+    readingCanvas.setFont(&FreeSansBold24pt7b);
+
+    int16_t left, top;
+    uint16_t width, height;
+    readingCanvas.getTextBounds(value, 0, 0, &left, &top, &width, &height);
+    if (width > readingWidth - 4) {
+        readingCanvas.setFont(&FreeSansBold18pt7b);
+        readingCanvas.getTextBounds(value, 0, 0, &left, &top, &width, &height);
+    }
+    const int16_t x = (readingWidth - int(width)) / 2 - left;
+    // Center on the height of a digit so the baseline also stays put for "--".
+    readingCanvas.getTextBounds("0", 0, 0, &left, &top, &width, &height);
+    const int16_t baseline = (readingHeight - int(height)) / 2 - top;
+    readingCanvas.setCursor(x, baseline);
+    readingCanvas.print(value);
+    readingCanvas.setFont(nullptr);
 }
 
 void button(int x, int w, const char *label, uint16_t color = white) {
@@ -119,6 +169,31 @@ void clearScreen() {
     }
 }
 
+constexpr uint16_t blendColor(uint16_t from, uint16_t to, float fraction) {
+    const auto channel = [=](unsigned shift, unsigned mask) {
+        const int start = (from >> shift) & mask;
+        const int end = (to >> shift) & mask;
+        return unsigned(start + (end - start) * fraction + 0.5f) << shift;
+    };
+    return channel(11, 31) | channel(5, 63) | channel(0, 31);
+}
+
+constexpr uint16_t rpmBarColor(float rpm) {
+    constexpr auto blue = colors::rgb565[colors::EngineBlue];
+    constexpr auto green = colors::rgb565[colors::EngineGreen];
+    constexpr auto yellow = colors::rgb565[colors::Yellow];
+    constexpr auto red = colors::rgb565[colors::EngineRed];
+    if (rpm <= 0) return blue;
+    if (rpm >= instrumentConfig::rpmLimit) return red;
+    if (rpm <= instrumentConfig::rpmIdle) {
+        return blendColor(blue, green, rpm / instrumentConfig::rpmIdle);
+    }
+    const float load = (rpm - instrumentConfig::rpmIdle) /
+                       (instrumentConfig::rpmLimit - instrumentConfig::rpmIdle);
+    if (load <= 0.5f) return blendColor(green, yellow, load * 2);
+    return blendColor(yellow, red, (load - 0.5f) * 2);
+}
+
 void updateReading(Side side, uint32_t now, bool force) {
     const Gauge gauge = gauges.selected(side);
     const auto reading = engineReading(gauge, dataMode.readings(), now);
@@ -126,11 +201,19 @@ void updateReading(Side side, uint32_t now, bool force) {
     const int x = readingLeft(side);
     const bool valid = reading.state == engine::State::Valid;
     const auto style = gaugeStyle::forReading(gauge, reading);
-    const uint16_t accent = valid ? colors::rgb565[style.accent] : muted;
+    const bool rpmWarning = valid && gauge == Gauge::Rpm &&
+        reading.value >= instrumentConfig::rpmLimit;
+    uint16_t accent = muted;
+    if (valid) accent = gauge == Gauge::Rpm ? rpmBarColor(reading.value) : colors::rgb565[style.accent];
     const uint16_t valueColor = valid ? white : muted;
     const char *value = valid ? reading.text : "--";
     const char *units = valid ? reading.units : "";
-    const char *status = style.status;
+    const bool coolantWarning = valid && gauge == Gauge::Coolant &&
+        (style.accent == colors::EngineOrange || style.accent == colors::EngineRed);
+    const uint16_t statusColor = (coolantWarning || rpmWarning) ? accent : muted;
+    const char *status = "";
+    if (coolantWarning) status = style.status;
+    if (rpmWarning) status = "LIMIT";
     if (!valid) {
         status = "WAITING FOR ECU";
         if (!can.ready()) status = "CAN OFFLINE";
@@ -139,29 +222,32 @@ void updateReading(Side side, uint32_t now, bool force) {
     }
 
     if (force || strcmp(previous.value, value) || previous.valueColor != valueColor) {
-        readingCanvas.fillScreen(background);
-        const auto size = strlen(value) <= 4 ? 6 : 4;
-        centerText(readingCanvas, value, readingWidth / 2, (readingHeight - 8 * size) / 2,
-                   size, valueColor);
+        drawValue(value, valueColor);
         pushReading(x, valueTop);
         strcpy(previous.value, value);
         previous.valueColor = valueColor;
     }
 
     if (force || strcmp(previous.units, units) || strcmp(previous.status, status) ||
-        previous.accent != accent) {
+        previous.statusColor != statusColor) {
         readingCanvas.fillScreen(background);
-        if (valid) {
-            centerText(readingCanvas, units, readingWidth / 2, 6, 2, accent);
-            centerText(readingCanvas, status, readingWidth / 2, 34, 1, muted);
+        centerSans(readingCanvas, FreeSans9pt7b, units, readingWidth / 2, 14, white,
+                   gauge == Gauge::Coolant || gauge == Gauge::Iat);
+        if (!valid && can.ready() && reading.state == engine::State::Never) {
+            centerSans(readingCanvas, FreeSansBold9pt7b, "WAITING FOR",
+                       readingWidth / 2, 32, muted);
+            centerSans(readingCanvas, FreeSansBold9pt7b, "ECU",
+                       readingWidth / 2, 48, muted);
         } else {
-            centerText(readingCanvas, status, readingWidth / 2, 24, 1, muted);
+            centerSans(readingCanvas, FreeSansBold9pt7b, status, readingWidth / 2, 43, statusColor);
         }
         pushReading(x, detailTop);
         previous.units = units;
         previous.status = status;
+        previous.statusColor = statusColor;
     }
-    const int bar = valid ? int(gaugeStyle::position(style, reading.value) * readingWidth) : 0;
+    int bar = valid ? int(gaugeStyle::position(style, reading.value) * readingWidth) : 0;
+    if (valid && gauge == Gauge::Rpm && bar == 0) bar = 2;
     if (force || accent != previous.accent) {
         if (bar) tft.fillRect(x, barTop, bar, barHeight, accent);
         if (bar < readingWidth) {
@@ -193,7 +279,8 @@ void showGauge() {
     tft.drawFastVLine(columnWidth, 20, barTop + barHeight - 20, track);
     for (Side side : sides) {
         const int center = readingLeft(side) + readingWidth / 2;
-        centerText(shortLabel(gauges.selected(side)), center, 28, 2, cyan);
+        centerSans(tft, FreeSansBold9pt7b, shortLabel(gauges.selected(side)),
+                   center, 45, cyan);
     }
     updateReadings(true);
     drawDataSource();
@@ -276,6 +363,51 @@ void calibrate() {
     drawCalibration();
 }
 
+void showInitialPage() {
+    if (calibration.valid()) showGauge();
+    else calibrate();
+}
+
+void drawHondaMark(uint16_t color) {
+    constexpr int x = (hardware::width - 114) / 2;
+    constexpr int y = (hardware::height - 94) / 2;
+    for (int i = 0; i < 5; ++i) {
+        tft.drawRoundRect(x + i, y + i, 114 - 2 * i, 94 - 2 * i, 20 - i, color);
+    }
+    // Flared uprights and a wide crossbar, based on the CR-V-era badge.
+    tft.fillTriangle(x + 24, y + 15, x + 43, y + 14, x + 47, y + 79, color);
+    tft.fillTriangle(x + 24, y + 15, x + 47, y + 79, x + 34, y + 79, color);
+    tft.fillTriangle(x + 90, y + 15, x + 71, y + 14, x + 67, y + 79, color);
+    tft.fillTriangle(x + 90, y + 15, x + 67, y + 79, x + 80, y + 79, color);
+    tft.fillRoundRect(x + 37, y + 42, 40, 14, 4, color);
+}
+
+void startSplash() {
+    page = Page::Splash;
+    clearScreen();
+    drawHondaMark(white);
+    splashStarted = millis();
+}
+
+void serviceSplash(uint32_t now) {
+    const uint32_t elapsed = now - splashStarted;
+    if (elapsed < splashHoldMs) return;
+    const uint32_t step = (elapsed - splashHoldMs) / splashStepMs;
+    if (step >= splashSteps) {
+        showInitialPage();
+        return;
+    }
+    if (step == splashStep) return;
+    splashStep = step;
+    const unsigned remaining = splashSteps - splashStep;
+    const auto fade = [remaining](unsigned start, unsigned end) {
+        return end + (start - end) * remaining / splashSteps;
+    };
+    const auto color = uint16_t((fade(31, background >> 11) << 11) |
+        (fade(63, (background >> 5) & 63) << 5) | fade(31, background & 31));
+    drawHondaMark(color);
+}
+
 void settingsChanged() {
     settingsDirty = true;
     settingsAt = millis();
@@ -329,6 +461,7 @@ void handleTap(Point raw) {
 
 void setup() {
     beginDiagnostics();
+    readingCanvas.setTextWrap(false);
     logLine("Touch Screen CAN v%s\n", TOUCH_CAN_VERSION);
     settingsOpen = settings.begin("touch-can", false);
     if (settingsOpen) {
@@ -353,8 +486,8 @@ void setup() {
     if (!readingCanvas.getBuffer()) logLine("UI reading buffer allocation failed\n");
     can.begin();
     if (touchReady && readingCanvas.getBuffer()) {
-        if (calibration.valid()) showGauge();
-        else calibrate();
+        if constexpr (instrumentConfig::showHondaSplash) startSplash();
+        else showInitialPage();
     }
 }
 
@@ -362,7 +495,9 @@ void loop() {
     can.service(decoder, dataMode.live);
     const uint32_t now = millis();
     dataMode.service(now);
-    if (touchReady && readingCanvas.getBuffer() && now - polledAt >= 12) {
+    if (page == Page::Splash) {
+        serviceSplash(now);
+    } else if (touchReady && readingCanvas.getBuffer() && now - polledAt >= 12) {
         polledAt = now;
         const auto sample = touch.getPoint();
         Point tap;
@@ -389,7 +524,8 @@ void loop() {
         can.report();
         logLine("UI version=%s layout=%dx%d spi_ready=%d page=%s calibrated=%d taps=%lu nvs=%d heap=%lu decoded=%lu\n",
                 TOUCH_CAN_VERSION, hardware::width, hardware::height, touchReady,
-                page == Page::Gauge ? "gauge" : page == Page::Menu ? "menu" : "calibrate",
+                page == Page::Gauge ? "gauge" : page == Page::Menu ? "menu" :
+                page == Page::Splash ? "splash" : "calibrate",
                 calibration.valid(), (unsigned long)tapCount, settingsOpen,
                 (unsigned long)ESP.getFreeHeap(), (unsigned long)decoder.matched);
         if (page == Page::Gauge) {
