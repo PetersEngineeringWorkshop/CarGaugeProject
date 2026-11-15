@@ -22,14 +22,18 @@ AttitudeGauge horizon(horizonDisplay.canvas());
 CompassGauge compass(compassDisplay.canvas());
 CompassGauge compassOnFirst(horizonDisplay.canvas());
 AttitudeGauge horizonOnSecond(compassDisplay.canvas());
-IMU imu;
-Magnetometer magnetometer;
+IMU imu(logLine);
+Magnetometer magnetometer(logLine);
 DualButton buttons;
 DisplaySettings settings;
 EngineGauge firstEngine(horizonDisplay.canvas()), secondEngine(compassDisplay.canvas());
 DemoMode dataMode;
-LinkGenericDashDecoder decoder;
-CanReceiver can;
+LinkGenericDashDecoder decoder({
+    {instrumentConfig::canId, instrumentConfig::canExtended},
+    instrumentConfig::enableOil, instrumentConfig::enableFuel, instrumentConfig::enableLambda
+});
+CanReceiver can({hardware::canTx, hardware::canRx, instrumentConfig::canBitrate,
+                 instrumentConfig::canAck}, decoder.stream(), logLine);
 bool levelConfirmation=false;
 uint32_t levelSetAt=0, levelSets=0, hShort=0, cShort=0, hLong=0, cLong=0;
 bool watchdogReady=false, firstHorizon=true, firstCompass=true, preferHorizon=true;
@@ -218,7 +222,7 @@ void setup() {
     logLine("DISPLAY index=2 face=%s cs=7 initialized=1 readback=unavailable\n",gaugeConfig::name(settings.second));
     // Begin sampling only after the startup-only display initialization delays.
     imu.begin(); stage(CanService); can.begin(); stage(Idle);
-    logLine("Dual Gauge CAN v1.1.0-dev bus=%d cs=10,7 spi_hz=%u indexed_buffers=230400 tile_buffers=512 heap=%u reset=%d prev=%lu wdt=%d; keep MPU still at startup\n",
+    logLine("Dual Gauge CAN v" GAUGE_FIRMWARE_VERSION " bus=%d cs=10,7 spi_hz=%u indexed_buffers=230400 tile_buffers=512 heap=%u reset=%d prev=%lu wdt=%d; keep MPU still at startup\n",
             busReady,(unsigned)hardware::spiHz,(unsigned)ESP.getFreeHeap(),
             (int)esp_reset_reason(),(unsigned long)previousStage,watchdogReady);
     command('v');

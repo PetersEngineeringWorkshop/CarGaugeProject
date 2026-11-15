@@ -10,6 +10,7 @@
 #include <esp_task_wdt.h>
 #include <esp_system.h>
 #include "horizon_geometry.h"
+#include "rgb565_transfer.h"
 
 #ifndef TFT_SPI_HZ
 #define TFT_SPI_HZ 20000000
@@ -504,10 +505,7 @@ void renderDisplay() {
         serviceSensor();
         stage(SPI_TRANSFER);
         uint32_t start = micros();
-        tft.startWrite();
-        tft.setAddrWindow(0, y, WIDTH, 8);
-        tft.writePixels(canvas.getBuffer() + y * WIDTH, WIDTH * 8, true);
-        tft.endWrite();
+        writeRgb565Rect(tft, 0, y, WIDTH, 8, canvas.getBuffer() + y * WIDTH);
         recordMax(stats.spiMaxUs, micros() - start);
     }
     ++stats.frames;
@@ -580,7 +578,7 @@ void setup() {
     initializeDisplay();
     lastRecoveryMs = millis() - 1000;
     recoverSensor();
-    logMessage("Attitude Indicator v1.0.0 framebuffer=%u internal RAM spi=%u psram=%u "
+    logMessage("Attitude Indicator v" GAUGE_FIRMWARE_VERSION " framebuffer=%u internal RAM spi=%u psram=%u "
                "wdt=%d; commands: d=demo, r=TFT reset, z=zero. "
                "Keep sensor level at startup.\n",
                (unsigned)(WIDTH * HEIGHT * 2), (unsigned)TFT_SPI_HZ,

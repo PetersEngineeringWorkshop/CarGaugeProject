@@ -16,8 +16,8 @@ namespace {
 Display horizonDisplay(hardware::horizonCs), compassDisplay(hardware::compassCs);
 AttitudeGauge horizon(horizonDisplay.canvas());
 CompassGauge compass(compassDisplay.canvas());
-IMU imu;
-Magnetometer magnetometer;
+IMU imu(logLine);
+Magnetometer magnetometer(logLine);
 DebouncedButton attitudeButton, compassButton;
 DisplaySettings settings;
 bool levelConfirmation=false;
@@ -163,7 +163,7 @@ void setup() {
     logLine("DISPLAY index=2 face=compass cs=7 initialized=1 readback=unavailable\n");
     // Begin sampling only after the startup-only display initialization delays.
     imu.begin(); stage(Idle);
-    logLine("Dual Gauge with Buttons v1.0.0 bus=%d cs=10,7 spi_hz=%u indexed_buffers=230400 tile_buffers=512 heap=%u reset=%d prev=%lu wdt=%d; keep MPU still at startup\n",
+    logLine("Dual Gauge with Buttons v" GAUGE_FIRMWARE_VERSION " bus=%d cs=10,7 spi_hz=%u indexed_buffers=230400 tile_buffers=512 heap=%u reset=%d prev=%lu wdt=%d; keep MPU still at startup\n",
             busReady,(unsigned)hardware::spiHz,(unsigned)ESP.getFreeHeap(),
             (int)esp_reset_reason(),(unsigned long)previousStage,watchdogReady);
     command('?');

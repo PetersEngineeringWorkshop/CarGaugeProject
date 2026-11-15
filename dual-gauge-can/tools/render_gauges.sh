@@ -6,6 +6,8 @@ trap 'rm -rf "$preview_tmp"' EXIT HUP INT TERM
 python3 tools/configure.py --output "$preview_tmp/instrument_config.h"
 gfx_dir='.pio/libdeps/vehicle/Adafruit GFX Library'
 c++ -std=c++17 -O2 -DARDUINO=100 -I tools/preview -I "$preview_tmp" -I include -I "$gfx_dir" \
+    -I ../shared/GaugeCan/src -I ../shared/IndexedFramebuffer/src -I ../shared/GaugeMath/src \
+    -I ../shared/DualGaugeComponents/src \
     tools/preview/render.cpp src/gauges/EngineGauge.cpp src/gauges/CompassGauge.cpp \
     "$gfx_dir/Adafruit_GFX.cpp" -o "$preview_tmp/render"
 "$preview_tmp/render" "$preview_tmp"

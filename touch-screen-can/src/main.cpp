@@ -12,6 +12,7 @@
 #include "diagnostics.h"
 #include "gauge_selection.h"
 #include "gauge_style.h"
+#include "rgb565_transfer.h"
 #include "touch_hardware.h"
 #include "touch_input.h"
 
@@ -60,8 +61,12 @@ Adafruit_ILI9341 tft(hardware::tftCs, hardware::dc, hardware::reset);
 XPT2046_Touchscreen touch(hardware::touchCs);
 GFXcanvas16 readingCanvas(readingWidth, readingHeight);
 Preferences settings;
-CanReceiver can;
-LinkGenericDashDecoder decoder;
+LinkGenericDashDecoder decoder({
+    {instrumentConfig::canId, instrumentConfig::canExtended},
+    instrumentConfig::enableOil, instrumentConfig::enableFuel, instrumentConfig::enableLambda
+});
+CanReceiver can({hardware::canTx, hardware::canRx, instrumentConfig::canBitrate,
+                 instrumentConfig::canAck}, decoder.stream(), logLine);
 DemoMode dataMode;
 GaugeSelection gauges;
 TouchCalibration calibration;
@@ -128,10 +133,7 @@ void centerSans(Adafruit_GFX &display, const GFXfont &font, const char *text,
 
 void pushReading(int x, int y) {
     // Send the finished pixels together so a live update never paints a blank field first.
-    tft.startWrite();
-    tft.setAddrWindow(x, y, readingWidth, readingHeight);
-    tft.writePixels(readingCanvas.getBuffer(), readingWidth * readingHeight);
-    tft.endWrite();
+    writeRgb565Rect(tft, x, y, readingWidth, readingHeight, readingCanvas.getBuffer());
 }
 
 void drawValue(const char *value, uint16_t color) {
@@ -462,7 +464,7 @@ void handleTap(Point raw) {
 void setup() {
     beginDiagnostics();
     readingCanvas.setTextWrap(false);
-    logLine("Touch Screen CAN v%s\n", TOUCH_CAN_VERSION);
+    logLine("Touch Screen CAN v%s\n", GAUGE_FIRMWARE_VERSION);
     settingsOpen = settings.begin("touch-can", false);
     if (settingsOpen) {
         gauges.restore(settings.getUInt("gauges-v1", gauges.packed()));
@@ -523,7 +525,7 @@ void loop() {
         reportedAt = now;
         can.report();
         logLine("UI version=%s layout=%dx%d spi_ready=%d page=%s calibrated=%d taps=%lu nvs=%d heap=%lu decoded=%lu\n",
-                TOUCH_CAN_VERSION, hardware::width, hardware::height, touchReady,
+                GAUGE_FIRMWARE_VERSION, hardware::width, hardware::height, touchReady,
                 page == Page::Gauge ? "gauge" : page == Page::Menu ? "menu" :
                 page == Page::Splash ? "splash" : "calibrate",
                 calibration.valid(), (unsigned long)tapCount, settingsOpen,

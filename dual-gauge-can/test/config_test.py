@@ -72,8 +72,8 @@ class ConfigurationTests(unittest.TestCase):
         c['displays']={'1':['coolant','oil','fuel','lambda','compass'],'2':['iat','horizon']}
         with tempfile.TemporaryDirectory() as tmp:
             p=Path(tmp);(p/'instrument_config.h').write_text(config.header(c))
-            for name,sources in [('integration',['test/config_integration_test.cpp','src/display_settings.cpp']),('receiver',['test/can_receiver_test.cpp','src/can/CanReceiver.cpp'])]:
-                subprocess.run(['c++','-std=c++17','-O2','-I',tmp,'-I','test/fakes','-I','include',*sources,'-o',str(p/name)],cwd=ROOT,check=True)
+            for name,sources in [('integration',['test/config_integration_test.cpp','src/display_settings.cpp']),('receiver',['test/can_receiver_test.cpp','../shared/GaugeCan/src/CanReceiver.cpp'])]:
+                subprocess.run(['c++','-std=c++17','-O2','-I',tmp,'-I','test/fakes','-I','include','-I','../shared/GaugeCan/src','-I','../shared/IndexedFramebuffer/src',*sources,'-o',str(p/name)],cwd=ROOT,check=True)
                 subprocess.run([str(p/name)],check=True)
 
 if __name__=='__main__':unittest.main()

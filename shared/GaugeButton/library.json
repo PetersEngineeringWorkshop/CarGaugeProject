@@ -1,0 +1,5 @@
+{
+  "name": "GaugeButton",
+  "version": "1.0.0",
+  "description": "Debounced push-button state machine"
+}

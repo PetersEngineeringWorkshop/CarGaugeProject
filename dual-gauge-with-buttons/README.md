@@ -1,4 +1,6 @@
-# Dual Gauge with Buttons — v1.0.0
+# Dual Gauge with Buttons — v1.0.1
+
+[Release notes for v1.0.1](../RELEASES.md#dual-gauge-with-buttons)
 
 Two continuously running GC9A01 instruments with independent controls:
 
@@ -11,7 +13,7 @@ Both screens run continuously. Each button changes only its associated screen.
 The connected CAN transceiver is ignored: GPIO5/6 are neither configured nor read,
 and no CAN peripheral, decoding, ECU integration, or additional sensor is enabled.
 
-Released on 2026-11-05 after physical button, calibration, and cold-start
+v1.0.0 was released on 2026-11-05 after physical button, calibration, and cold-start
 persistence checks. Build results and remaining test limits are recorded below.
 
 [Bill of materials](docs/BOM.md) · [Wiring diagram](#wiring-diagram) ·
@@ -241,12 +243,12 @@ calibration are occasional synchronous operations, not continuous rendering work
 ## Native checks
 
 ```sh
-c++ -std=c++17 -O2 -I include test/button_test.cpp src/input/Button.cpp -o /tmp/dgb-button && /tmp/dgb-button
+c++ -std=c++17 -O2 -I include -I ../shared/GaugeButton/src test/button_test.cpp ../shared/GaugeButton/src/Button.cpp -o /tmp/dgb-button && /tmp/dgb-button
 c++ -std=c++17 -O2 -I test/fakes -I include test/settings_test.cpp src/display_settings.cpp -o /tmp/dgb-settings && /tmp/dgb-settings
-c++ -std=c++17 -O2 -I test/fakes -I include test/calibration_workflow_test.cpp src/sensors/Magnetometer.cpp src/sensors/calibration_store.cpp -o /tmp/dgb-cal && /tmp/dgb-cal
+c++ -std=c++17 -O2 -I test/fakes -I include -I ../shared/GaugeMath/src -I ../shared/GaugeSensors/src -I ../shared/DualGaugeComponents/src test/calibration_workflow_test.cpp ../shared/DualGaugeComponents/src/Magnetometer.cpp ../shared/GaugeSensors/src/calibration_store.cpp -o /tmp/dgb-cal && /tmp/dgb-cal
 c++ -std=c++17 -O2 -I test/fakes -I include -I ../shared/IndexedFramebuffer/src test/display_test.cpp src/gauges/Display.cpp ../shared/IndexedFramebuffer/src/IndexedFramebuffer.cpp -o /tmp/dgb-display && /tmp/dgb-display
-c++ -std=c++17 -O2 -I include test/compass_math_test.cpp -o /tmp/dgb-compass && /tmp/dgb-compass
-c++ -std=c++17 -O2 -I include test/horizon_geometry_test.cpp -o /tmp/dgb-horizon && /tmp/dgb-horizon
+c++ -std=c++17 -O2 -I include -I ../shared/GaugeMath/src test/compass_math_test.cpp -o /tmp/dgb-compass && /tmp/dgb-compass
+c++ -std=c++17 -O2 -I include -I ../shared/GaugeMath/src test/horizon_geometry_test.cpp -o /tmp/dgb-horizon && /tmp/dgb-horizon
 ```
 
 Host fakes exercise actual button, settings, calibration orchestration/storage,

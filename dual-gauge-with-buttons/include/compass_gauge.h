@@ -1,14 +1,6 @@
 #pragma once
 #include <Adafruit_GFX.h>
-enum class CompassStatus { Waiting, Live, Uncalibrated, Calibrating, Fault, WeakField, CalibrationFailed, CalibrationSaved, SaveFailed };
-struct CompassState {
-    float heading=0;
-    CompassStatus status=CompassStatus::Waiting;
-    int seconds=0;
-    bool saved=false;
-    bool light=false;
-    bool sensorFresh=true;
-};
+#include "compass_state.h"
 class CompassGauge {
 public:
     explicit CompassGauge(GFXcanvas8 &surface) : canvas(surface) {}

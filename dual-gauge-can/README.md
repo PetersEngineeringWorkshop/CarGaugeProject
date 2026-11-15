@@ -1,4 +1,6 @@
-# Dual Gauge CAN v1.1.0-dev
+# Dual Gauge CAN v1.1.1
+
+[Release notes for v1.1.1](../RELEASES.md#dual-gauge-can)
 
 ![Dual gauges in the vehicle showing intake air at 77.0°F and coolant at 168.8°F](docs/images/vehicle-gauges.png)
 
@@ -18,7 +20,7 @@ firmware 6.22.3** ECU.
   [vehicle connection notes](docs/vehicle-connection.md)
 - [Verification record](docs/verification.md) and [v1.0.0 release notes](docs/release-v1.0.0.md)
 
-**Current development: v1.1.0-dev adds the two-button demo/live toggle.**
+**v1.1.1 includes the two-button demo/live toggle introduced in development.**
 Hold both buttons for two seconds to demonstrate the configured engine gauges
 without an ECU; hold both again to return to live data. The corrected left/right
 confirmation screens and both transitions have been tested on the hardware.

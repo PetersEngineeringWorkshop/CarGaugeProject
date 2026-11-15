@@ -1,6 +1,8 @@
-# Standalone digital compass — v1.0.0
+# Standalone digital compass — v1.0.1
 
-Firmware v1.0.0 for an ESP32-S3 SuperMini, one 1.28-inch GC9A01 round
+[Release notes for v1.0.1](../RELEASES.md#standalone-compass)
+
+Firmware for an ESP32-S3 SuperMini, one 1.28-inch GC9A01 round
 display, and a GY-271 module containing a **QMC5883P**. Built with PlatformIO and
 Arduino. The previous [attitude indicator](../attitude-indicator/README.md) remains
 a separate project.
@@ -268,7 +270,7 @@ compass firmware.
 Native heading and calibration math tests:
 
 ```sh
-c++ -std=c++17 -O2 -I include test/compass_math_test.cpp -o /tmp/compass-math-test
+c++ -std=c++17 -O2 -I include -I ../shared/GaugeMath/src test/compass_math_test.cpp -o /tmp/compass-math-test
 /tmp/compass-math-test
 ```
 

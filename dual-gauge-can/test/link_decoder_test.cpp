@@ -13,7 +13,10 @@ static CanFrame packet(uint8_t mux,uint16_t a,uint16_t b,uint16_t c) {
 }
 int main() {
     using S=engine::Signal;using State=engine::State;
-    LinkGenericDashDecoder decoder;engine::Data d;
+    LinkGenericDashDecoder decoder({
+        {instrumentConfig::canId, instrumentConfig::canExtended},
+        instrumentConfig::enableOil, instrumentConfig::enableFuel, instrumentConfig::enableLambda
+    });engine::Data d;
     // Independent documented examples: 0x1484 RPM=5252; map=200 kPa;
     // baro 1013=>101.3 kPa; ECT 40=>-10 C; volts 1385=>13.85 V.
     auto f=packet(0,5252,200,200);decoder.onFrame(f,100,d);

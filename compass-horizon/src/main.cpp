@@ -20,7 +20,7 @@ Mode mode=Mode::Compass, storedMode=Mode::Compass;
 Display display;
 CompassGauge compassGauge(display.canvas());
 AttitudeGauge attitudeGauge(display.canvas());
-IMU imu;
+IMU imu(logLine);
 Magnetometer magnetometer;
 DebouncedButton button;
 Preferences preferences;
@@ -169,7 +169,7 @@ void setup() {
     Wire.setTimeOut(hardware::i2cTimeoutMs);
     imu.begin();
     stage(Draw); display.begin(); stage(Idle);
-    logLine("Compass & Horizon v1.1.0 mode=%s mode_nvs=%d bus=%d button=GPIO13 activeLOW debounce=40ms long=2000ms; keep MPU level at startup\n",
+    logLine("Compass & Horizon v" GAUGE_FIRMWARE_VERSION " mode=%s mode_nvs=%d bus=%d button=GPIO13 activeLOW debounce=40ms long=2000ms; keep MPU level at startup\n",
             modeName(),modeStoreReady,busReady);
     command('?');
     if(watchdogReady) esp_task_wdt_reset();

@@ -1,0 +1,5 @@
+{
+  "name": "GaugeSensors",
+  "version": "1.0.0",
+  "description": "QMC5883P, MPU-6050 and compass calibration storage"
+}

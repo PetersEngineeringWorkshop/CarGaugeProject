@@ -12,6 +12,8 @@ Choose a project for its wiring, controls, calibration, and test results.
 | [Standalone compass](compass/README.md) | One GC9A01 display and a QMC5883P magnetometer. | [BOM](compass/docs/BOM.md) |
 | [Attitude indicator](attitude-indicator/README.md) | One GC9A01 display and an MPU-6050 accelerometer/gyroscope. | [BOM](attitude-indicator/docs/BOM.md) |
 
+See [firmware releases](RELEASES.md) for the current versions and tags.
+
 ## Shared hardware
 
 The [dual-gauge enclosure](hardware/dual-gauge-enclosure/README.md) fits the two-display
@@ -45,14 +47,21 @@ The PlatformIO Core installer supplies a Python environment with `pyserial`, or
 you can install it in your own Python environment with
 `python -m pip install pyserial`.
 
-## Shared framebuffer and contributions
+## Shared firmware libraries
 
-The indexed-color projects build against [IndexedFramebuffer](shared/IndexedFramebuffer)
-in the same checkout. Tile detection, RGB565 conversion, and transfer batching
-live there. Each firmware owns its display setup, palette, and render schedule.
-The [GitHub Actions workflow](.github/workflows/indexed-framebuffer.yml) checks
-the four indexed firmware builds. The project verification sections describe
-native tests and checks that require physical hardware.
+The projects use local PlatformIO libraries in [shared](shared). The round and
+touchscreen CAN firmwares use [GaugeCan](shared/GaugeCan) for the receiver,
+decoder, engine readings, and demo data. Each firmware supplies its own CAN and
+display settings. [IndexedFramebuffer](shared/IndexedFramebuffer) owns the
+round gauges' indexed tiles and provides the RGB565 rectangle writer used by
+both display types. The touchscreen buffers individual reading fields.
+
+The [GitHub Actions workflow](.github/workflows/indexed-framebuffer.yml) builds
+all six firmware projects and the two listen-only CAN configurations. The
+project verification sections cover native tests and checks that require
+physical hardware.
+
+## Contributions
 
 For a bug report or pull request, include the project and firmware version, your
 board and modules, the steps to reproduce or verify the behavior, and any relevant

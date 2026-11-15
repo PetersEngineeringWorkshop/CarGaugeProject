@@ -234,7 +234,7 @@ void setup() {
     busReady = Wire.begin(hardware::sda, hardware::scl, hardware::i2cHz);
     Wire.setTimeOut(hardware::i2cTimeoutMs);
     stage(Draw); display.begin(); stage(Idle);
-    logLine("Standalone Compass v1.0.0 QMC5883P only; magnetic north, LEVEL ONLY; calibration_loaded=%d\n", calibrated);
+    logLine("Standalone Compass v" GAUGE_FIRMWARE_VERSION " QMC5883P only; magnetic north, LEVEL ONLY; calibration_loaded=%d\n", calibrated);
     command('?');
     if (watchdogReady) esp_task_wdt_reset();
 }

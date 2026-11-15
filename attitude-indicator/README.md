@@ -1,4 +1,6 @@
-# ESP32-S3 attitude indicator — v1.0.0
+# ESP32-S3 attitude indicator — v1.0.1
+
+[Release notes for v1.0.1](../RELEASES.md#attitude-indicator)
 
 PlatformIO/Arduino artificial horizon for an ESP32-S3 SuperMini and a 240×240
 GC9A01 TFT. MPU-6050 address: `0x68`. Keep the sensor level during startup; the
@@ -269,7 +271,7 @@ Host geometry regression compares the optimized ground spans against the origina
 per-pixel test across level, vertical, inverted, and off-screen horizons:
 
 ```sh
-c++ -std=c++11 -O2 -I include test/horizon_geometry_test.cpp -o /tmp/gauge-geometry
+c++ -std=c++11 -O2 -I include -I ../shared/GaugeMath/src test/horizon_geometry_test.cpp -o /tmp/gauge-geometry
 /tmp/gauge-geometry
 ```
 

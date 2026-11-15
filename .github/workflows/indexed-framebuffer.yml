@@ -1,14 +1,16 @@
-name: Indexed framebuffer
+name: Gauge firmware
 
 on:
   push:
     paths: &firmware_paths
       - '.github/workflows/indexed-framebuffer.yml'
-      - 'shared/IndexedFramebuffer/**'
+      - 'shared/**'
+      - 'attitude-indicator/**'
       - 'compass/**'
       - 'compass-horizon/**'
       - 'dual-gauge-can/**'
       - 'dual-gauge-with-buttons/**'
+      - 'touch-screen-can/**'
   pull_request:
     paths: *firmware_paths
 
@@ -21,11 +23,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        project: [compass, compass-horizon, dual-gauge-can, dual-gauge-with-buttons]
+        project: [attitude-indicator, compass, compass-horizon, dual-gauge-can, dual-gauge-with-buttons, touch-screen-can]
+        environment: [esp32-s3-devkitc-1]
+        include:
+          - project: dual-gauge-can
+            environment: listen-only
+          - project: touch-screen-can
+            environment: listen-only
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: python -m pip install platformio==6.2.0
-      - run: pio run -d "${{ matrix.project }}"
+      - run: pio run -d "${{ matrix.project }}" -e "${{ matrix.environment }}"

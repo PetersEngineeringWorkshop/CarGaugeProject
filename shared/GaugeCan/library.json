@@ -1,0 +1,5 @@
+{
+  "name": "GaugeCan",
+  "version": "1.0.0",
+  "description": "Link Generic Dash decoding, engine readings and ESP32 TWAI receive"
+}

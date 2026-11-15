@@ -1,4 +1,6 @@
-# Compass & Horizon — v1.1.0
+# Compass & Horizon — v1.1.1
+
+[Release notes for v1.1.1](../RELEASES.md#compass-and-horizon)
 
 Two instruments on **one** GC9A01 display, selected with a
 GPIO13 push button. The project directory is `compass-horizon` (the chosen name
@@ -264,14 +266,14 @@ is selected.
 
 ```text
 src/main.cpp                 scheduling, mode selection/storage, diagnostics
-src/input/Button.cpp         debounced input state machine
-src/sensors/IMU.cpp           reused MPU reads/filter; nonblocking wake-up
-src/sensors/Magnetometer.cpp  reused heading, calibration, freshness/retry logic
-src/sensors/qmc5883p.cpp      unchanged QMC5883P register driver
-src/sensors/calibration_store.cpp  unchanged saved-calibration format
-src/gauges/CompassGauge.cpp   reused compass artwork
-src/gauges/AttitudeGauge.cpp  reused horizon artwork and row-span geometry
-src/gauges/Display.cpp        shared canvas, palette, and bounded SPI transfers
+src/sensors/Magnetometer.cpp  heading, calibration, freshness, and retries
+src/gauges/CompassGauge.cpp   compass artwork
+src/gauges/AttitudeGauge.cpp  horizon artwork
+src/gauges/Display.cpp        display initialization and transfer budget
+../shared/GaugeButton        debounced input state machine
+../shared/GaugeMath          compass math and horizon geometry
+../shared/GaugeSensors       MPU reads/filter, QMC5883P driver, calibration storage
+../shared/IndexedFramebuffer canvas, palette, and bounded SPI transfers
 ```
 
 I²C and the display initialize once at startup. Device recovery only configures
@@ -304,9 +306,9 @@ button bounce, short-on-release, 1999/2000 ms boundary, long-release suppression
 startup-held, timer-rollover, and mode-action checks:
 
 ```sh
-c++ -std=c++17 -O2 -I include test/button_test.cpp src/input/Button.cpp -o /tmp/ch-button && /tmp/ch-button
-c++ -std=c++17 -O2 -I include test/compass_math_test.cpp -o /tmp/ch-compass && /tmp/ch-compass
-c++ -std=c++17 -O2 -I include test/horizon_geometry_test.cpp -o /tmp/ch-horizon && /tmp/ch-horizon
+c++ -std=c++17 -O2 -I include -I ../shared/GaugeButton/src test/button_test.cpp ../shared/GaugeButton/src/Button.cpp -o /tmp/ch-button && /tmp/ch-button
+c++ -std=c++17 -O2 -I include -I ../shared/GaugeMath/src test/compass_math_test.cpp -o /tmp/ch-compass && /tmp/ch-compass
+c++ -std=c++17 -O2 -I include -I ../shared/GaugeMath/src test/horizon_geometry_test.cpp -o /tmp/ch-horizon && /tmp/ch-horizon
 ```
 
 The hardware switch test sends 20 regular and 10 rapid mode switches, checks

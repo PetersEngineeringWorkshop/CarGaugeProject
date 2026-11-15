@@ -13,7 +13,10 @@ int main() {
     // Every optional source is enabled only by inclusion in one of the manifests.
     assert(instrumentConfig::enableOil && instrumentConfig::enableFuel && instrumentConfig::enableLambda);
     CanFrame f;f.id=instrumentConfig::canId;f.extended=true;f.dlc=8;
-    LinkGenericDashDecoder decoder;engine::Data d;
+    LinkGenericDashDecoder decoder({
+        {instrumentConfig::canId, instrumentConfig::canExtended},
+        instrumentConfig::enableOil, instrumentConfig::enableFuel, instrumentConfig::enableLambda
+    });engine::Data d;
     f.data[0]=8;f.data[4]=0x2c;f.data[5]=1;decoder.onFrame(f,100,d);
     assert(d.get(S::OilKpa).value==300);
     assert(!strcmp(engineReading(Gauge::Oil,d,100).units,"kPa"));

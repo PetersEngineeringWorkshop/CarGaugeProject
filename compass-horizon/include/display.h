@@ -3,10 +3,7 @@
 #include <Adafruit_GC9A01A.h>
 #include "hardware.h"
 
-namespace colors {
-enum : uint8_t { Background, White, Muted, Gold, North, Cyan, Red, Green,
-                 Sky, Ground, Black, Yellow, HorizonCyan, DarkGold };
-}
+#include "gauge_palette.h"
 
 // One fixed palette for BOTH faces: shadow-buffer bytes always describe the
 // physical display, including a partly transmitted frame interrupted by a switch.

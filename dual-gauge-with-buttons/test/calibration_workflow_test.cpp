@@ -1,4 +1,5 @@
 #include "magnetometer.h"
+#include "diagnostics.h"
 #include <Preferences.h>
 #include <cassert>
 #include <cstdio>
@@ -24,7 +25,7 @@ Qmc5883p::Result Qmc5883p::read(MagneticSample &sample) {
 int main() {
     CalibrationStore store; assert(store.begin());
     const compass::Vector old{11,22,33}; assert(store.save(old));
-    Magnetometer mag; mag.begin(); advance(mag); advance(mag);
+    Magnetometer mag(logLine); mag.begin(); advance(mag); advance(mag);
     assert(mag.fresh() && mag.isSaved() && same(mag.offsets(),old));
     assert(mag.startCalibration(true));
     auto started=millis();
@@ -37,7 +38,7 @@ int main() {
     assert(mag.isSaved() && same(mag.offsets(),expected));
     assert(mag.displayState().status==CompassStatus::CalibrationSaved);
     assert(begins==1); // No sensor restart for calibration.
-    Magnetometer reboot; reboot.begin(); assert(reboot.isSaved() && same(reboot.offsets(),expected));
+    Magnetometer reboot(logLine); reboot.begin(); assert(reboot.isSaved() && same(reboot.offsets(),expected));
     advance(mag,3001); assert(mag.displayState().status==CompassStatus::Live);
 
     auto savedRecord=fake::nvs.at("qmc5883p/hardiron");

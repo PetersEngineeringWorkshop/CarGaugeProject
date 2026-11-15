@@ -1,8 +1,7 @@
 #include "display.h"
 #include <SPI.h>
 namespace {
-constexpr uint16_t palette[]={0x0841,0xFFFF,0x738E,0xFEA0,0xF985,0x5E7F,0xF800,0x07E0,
-                              0x249F,0x8A22,0x0000,0xFFE0,0x07FF,0x8A60};
+constexpr auto &palette=colors::rgb565;
 }
 Display::Display() : IndexedFramebuffer(palette), tft(hardware::cs,hardware::dc,hardware::rst) {}
 void Display::begin() {

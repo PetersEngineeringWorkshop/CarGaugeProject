@@ -1,0 +1,5 @@
+{
+  "name": "GaugeDiagnostics",
+  "version": "1.0.0",
+  "description": "Bounded serial diagnostics for gauge firmware"
+}

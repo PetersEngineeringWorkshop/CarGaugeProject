@@ -8,7 +8,10 @@ int main() {
     engine::Data data;
     for(auto g:gaugeConfig::first) if(g!=Gauge::Horizon) assert(engineReading(g,data,0).state==State::Never);
     for(auto g:gaugeConfig::second) if(g!=Gauge::Compass) assert(engineReading(g,data,0).state==State::Never);
-    LinkGenericDashDecoder decoder;CanFrame frame;frame.id=0x3E8;frame.dlc=8;memset(frame.data,0xff,8);
+    LinkGenericDashDecoder decoder({
+        {instrumentConfig::canId, instrumentConfig::canExtended},
+        instrumentConfig::enableOil, instrumentConfig::enableFuel, instrumentConfig::enableLambda
+    });CanFrame frame;frame.id=0x3E8;frame.dlc=8;memset(frame.data,0xff,8);
     decoder.onFrame(frame,100,data);for(auto &c:data.channels) assert(!c.received);
     data.get(S::Rpm).set(0,100);auto r=engineReading(Gauge::Rpm,data,100);
     assert(r.state==State::Valid && !strcmp(r.text,"0"));

@@ -1,10 +1,13 @@
-# Touch Screen CAN v1.1.0
+# Touch Screen CAN v1.1.1
+
+[Release notes for v1.1.1](../RELEASES.md#touch-screen-can)
 
 Single-screen Link Generic Dash instrument for an ESP32-S3 SuperMini
 (ESP32-S3FH4R2, 4 MB flash), an ILI9341 240×320 SPI display with XPT2046 resistive
-touch, and a 3.3 V CAN transceiver. It compiles the CAN receiver, Link decoder,
-reading conversions, and coolant thresholds from the same code used by
-[Dual Gauge CAN](../dual-gauge-can/README.md). Build from the full repository.
+touch, and a 3.3 V CAN transceiver. It uses [GaugeCan](../shared/GaugeCan)
+for the same CAN reception, decoding, and engine-reading logic as
+[Dual Gauge CAN](../dual-gauge-can/README.md). This project supplies its
+[instrument settings](include/instrument_config.h). Build from the full repository.
 
 [Bill of materials](docs/BOM.md) · [Wiring diagram](#wiring-diagram) ·
 [v1.1.0 release notes](docs/release-v1.1.0.md) ·

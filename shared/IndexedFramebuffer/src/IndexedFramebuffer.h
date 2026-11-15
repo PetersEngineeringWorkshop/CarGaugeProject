@@ -2,6 +2,7 @@
 
 #include <Adafruit_GFX.h>
 #include <stdint.h>
+#include "rgb565_transfer.h"
 
 class IndexedFramebuffer {
 public:
@@ -27,11 +28,7 @@ public:
     void flushBatch(unsigned budget, Driver &driver) {
         flushBatch(budget, &driver, [](void *target, int x, int y, int width,
                                       int height, uint16_t *pixels) {
-            auto &panel = *static_cast<Driver *>(target);
-            panel.startWrite();
-            panel.setAddrWindow(x, y, width, height);
-            panel.writePixels(pixels, width * height, true);
-            panel.endWrite();
+            writeRgb565Rect(*static_cast<Driver *>(target), x, y, width, height, pixels);
         });
     }
 

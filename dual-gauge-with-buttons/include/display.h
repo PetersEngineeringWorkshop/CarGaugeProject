@@ -3,10 +3,7 @@
 #include <Adafruit_GC9A01A.h>
 #include "hardware.h"
 
-namespace colors {
-enum : uint8_t { Background, White, Muted, Gold, North, Cyan, Red, Green,
-                 Sky, Ground, Black, Yellow, HorizonCyan, DarkGold };
-}
+#include "gauge_palette.h"
 
 // Each display owns its canvas and shadow so an in-flight frame stays immutable.
 // No full RGB565 framebuffer, PSRAM, DMA, or runtime framebuffer allocation.

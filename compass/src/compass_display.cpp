@@ -1,11 +1,12 @@
 #include "compass_display.h"
 #include "compass_math.h"
+#include "gauge_palette.h"
 #include <SPI.h>
 #include <cstring>
 
 namespace {
-enum Color : uint8_t { Background, White, Muted, Gold, North, Cyan, Red, Green };
-constexpr uint16_t palette[] = {0x0841, 0xFFFF, 0x738E, 0xFEA0, 0xF985, 0x5E7F, 0xF800, 0x07E0};
+using namespace colors;
+constexpr auto &palette = rgb565;
 void recordMax(uint32_t &a, uint32_t b) { if (b > a) a = b; }
 }
 
